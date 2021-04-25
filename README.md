@@ -1,9 +1,11 @@
 # Navmap
 As my diploma this repo for finding the shortest road path. 
 
-1. For example I get a little map of Novosibirsk(Russia) from OpenStreetMap(XML). 
-2. Next I export it with oms2pgsql to Postregsql with PostGIS extension.
-3. From planet_osm_roads should be removed unnecessery highways(where highway = "cicleway", "track" and other)
-4. To make road graph should know start and end points of geometries. It can be done with PostGIS functions as ST_StartPoint() and ST_EndPoint().
-5. Next should make adjacency matrix. Thats why we need start and end points. We go throught all rows in our table to find rows where start or end points matches. If it's true, in the matrix will be value of distanse between these geometries. Else - 0.
+1. For example I got a little map of Novosibirskiy Akademgorodok(Russia) from OpenStreetMap(XML). 
+2. Next I export it with osm2pgrouting(recommended) to Postregsql.
+3. From ways should be removed unnecessery highways(where highway = "cicleway" and other)
+4. If u loaded osm data with osm2pgrouting u do not need to divide roads at intersection points(crossroads)
+5. Next should make adjacency matrix. 
+5. 1. First step - get vertices of roads(start and end points without repeating)
+5. 2. Second step - inital th
 6. Next we can use any algorithm we wish. In this repo used modificated Dijkstra's algorithm.
