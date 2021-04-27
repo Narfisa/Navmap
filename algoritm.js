@@ -2,9 +2,10 @@ const fs = require('fs')
 const queries = require('./queries')
 
 // reading matrix from a json file
-function readFile(file, callback) {
+function readMatrix(file, callback) {
     fs.readFile(file, function (err, content) {
         if (err) return callback(err)
+        console.log('Reading file is ended')
         callback(null, JSON.parse(content))
     })
 }
@@ -147,71 +148,118 @@ async function adjacencyMatrix(){
 }
 
 // finding shortestPath with Dejkstra algoritm
-function shortestPath(matrix, from, to){
-    const SIZE = matrix[0].length
-    console.log(SIZE)
-    let d = [SIZE]; // min distance
-    let v = [SIZE]; // is visited
-    let temp, minindex, min;
-    let begin_index = findIndex(from, matrix);
+async function shortestPath(matrix, from, to){
+    // matrix = [
+    //     [0, 8, 0, 1, 0, 0],
+    //     [8, 0, 4, 7, 2, 0],
+    //     [0, 4, 0, 9, 4, 2],
+    //     [1, 7, 9, 0, 7, 1],
+    //     [0, 2, 4, 7, 0, 6],
+    //     [0, 0, 2, 1, 6, 0]
+    // ]
+
+    let vertices = await getVertices(await queries.getCount())
+    const SIZE = vertices.length // get count of vertices
+    let start = findIndex(from, vertices); // finding index of start point
+    let end = findIndex(to, vertices); // finding index of end point
+    vertices = null // delete 'cause do not need
+
+    let ver = [];   // array of previous vertices
+    
+    let distance = [SIZE]; // distance array
+    let v = [SIZE]; // flag - a vertex is visited or not
+    let temp, minindex, min; // temp is for calculating min distance to every vertex
+                             // min - current min distance, minindex- current index of vertex with min distance
     
     // init 
+    // distance for all bertices is infinity
+    // all vertices are not visited yet
     for (let i = 0; i<SIZE; i++)
     {
-        d[i] = 10000;
+        distance[i] = Infinity;
         v[i] = false;
     }
-    d[begin_index] = 0; // for first vertices value is 0
 
-    // Шаг алгоритма
+    // for start point distance is 0 in the algorithm
+    distance[start] = 0; 
+    ver.push({              
+        index: start,
+        previos: null,
+        distance: distance[start]    
+    })
+    // cycle
     do {
-        minindex = 10000;
-        min = 10000;
-        for (let i = 0; i<SIZE; i++) { // Если вершину ещё не обошли и вес меньше min
-            if (v[i] && (d[i]<min)) { // Переприсваиваем значения
-                min = d[i];
-                minindex = i;
+        // reset values every step to 
+        // numbers about infinity
+        minindex = Infinity; 
+        min = Infinity;
+        
+        // finding vertices are not visited with min distance between other adjacent vertices
+        for (let i = 0; i<SIZE; i++) { // cycle perl all vertices
+            if (!v[i] && (distance[i]<min)) { // if vertex is not visited yet and it has min distance
+                min = distance[i];  // now it vertex has min distance
+                minindex = i;       // index of vertex with min distance
             }
         }
-        // Добавляем найденный минимальный вес
-        // к текущему весу вершины
-        // и сравниваем с текущим минимальным весом вершины
-        if (minindex != 10000) {
+
+        // if minindex is found
+        if (minindex != Infinity) {
             for (let i = 0; i<SIZE; i++) {
-                if (matrix[minindex][i] > 0) {
-                    temp = min + matrix[minindex][i];
-                    if (temp < d[i]) {
-                        d[i] = temp;
+                if (matrix[minindex][i] > 0) { // if vertices are connected(has weight between themselves)
+                    temp = min + matrix[minindex][i]; // adding new weight
+                    if (temp < distance[i]) {   // if calculated distance(temp) from start point to the vertex
+                                                // < then distance to the vertex is already known(distance[i]), 
+                        distance[i] = temp;     // then new distance is calculated distance now
+                        
+                        // adding a vertex to array
+                        // there are looking for a connected vertex with the min distance. If its found - added it.
+                        // checking vertex(that is visiting now) is a vertex with 'minindex' index and its will be the previos vertex.
+                        // a vertex connected to the cheching vertex with min distance - vertex with 'i' index
+                        // there is also pushing distance between this vertices, 
+                        // 'cause after checking other vertices the distance maybe less than previous value
+                        ver.push({              
+                            index: i,  
+                            previos: minindex,  
+                            distance: matrix[i][minindex]
+                        })
                     }
                 }
             }
-            v[minindex] = 0;
+            // make flag that means the vertex is visited
+            v[minindex] = true;
         }
-    } while (minindex < 10000);
+    } while (minindex < Infinity);
+    console.log('calc min distances end')
 
-    // Восстановление пути
-    let ver = [SIZE]; // массив посещенных вершин
-    let end = findIndex(to, matrix)+1; // индекс конечной вершины
-    ver[0] = end-1; // начальный элемент - конечная вершина
-    let k = begin_index+1;
-    let weight = d[end]; // вес конечной вершины
-    console.log(weight)
-    
-    while (end != begin_index) { // пока не дошли до начальной вершины
-        for (let i = 0; i<SIZE; i++) { // просматриваем все вершины
-            if (matrix[i][end] != 0) {  // если связь есть
-                let temp = weight - matrix[i][end]; // определяем вес пути из предыдущей вершины
-                if (temp == d[i]) { // если вес совпал с рассчитанным значит из этой вершины и был переход
-                    weight = temp; // сохраняем новый вес
-                    end = i;       // сохраняем предыдущую вершину
-                    ver[k] = i + 1; // и записываем ее в массив
-                    k++;
+    // finding path like array of vertices
+
+    // deleting dublicates with the most length(distance)
+    for (let i=0; i<ver.length; i++){
+        for (let j=0; j<ver.length; j++){
+            if (i != j && ver[i].index == ver[j].index){
+                if (ver[i].distance > ver[j].distance){
+                    ver.splice(i,1)
+                } else {
+                    ver.splice(j,1)
                 }
             }
         }
     }
-    
-    return ver.reverse()
+
+    // make a path: finding previous vertex and adding them to path
+    let path = []
+    console.log(distance[end])
+    let totalDistance = 0;
+    do {
+        let item = ver.find(x => x.index == end)
+        
+        path.push(item.index)
+        totalDistance += item.distance
+        end = item.previos
+    } while (end != start)
+    path.push(start)
+    console.log(totalDistance)
+    return path.reverse()
 }
 
-module.exports = {adjacencyMatrix, shortestPath, readFile}
+module.exports = {adjacencyMatrix, shortestPath, readMatrix}

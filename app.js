@@ -11,12 +11,16 @@ let end = {
     x: 83.0987331,
     y: 54.858106
 }
-algoritm.adjacencyMatrix().then(data => {
-    console.log('done')
+
+// for finding path we need to load adjacency matrix first
+algoritm.readMatrix(file, function (err, content) {
+    let path = algoritm.shortestPath(content, start, end)
+    .then(data => {
+        console.log(data)
+    })
+    .catch(err => {
+        console.log(err)
+    })
 })
-// algoritm.readFile(file, function (err, content) {
-//     let path = algoritm.shortestPath(content, start, end)
-//     console.log(path)
-// })
 
 

@@ -105,3 +105,6 @@ dist
 
 # DB connection
 db.js
+
+# adjacency matrix
+matrix.json
