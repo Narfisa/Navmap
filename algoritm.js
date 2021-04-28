@@ -147,22 +147,31 @@ async function adjacencyMatrix(){
     return matrix
 }
 
+async function findRoadByVertices(firstVertex, secondVertex, count){
+    for (let i = 1; i<=count; i++){
+        let road = await queries.getRoad(i)
+        if (isConnected(firstVertex, road) && isConnected(secondVertex, road)){
+            return road
+        }
+    }
+    return false
+}
+async function makeRoadPath(path, vertices, count){
+    let roadPath = []
+    for (let i = 0; i < path.length-1; i++){
+        let firstVertex = vertices[path[i]]  
+        let secondVertex = vertices[path[i+1]]
+        let road = await findRoadByVertices(firstVertex, secondVertex, count)
+        if (road) roadPath.push(road.the_geom)
+    }
+    return roadPath
+}
 // finding shortestPath with Dejkstra algoritm
 async function shortestPath(matrix, from, to){
-    // matrix = [
-    //     [0, 8, 0, 1, 0, 0],
-    //     [8, 0, 4, 7, 2, 0],
-    //     [0, 4, 0, 9, 4, 2],
-    //     [1, 7, 9, 0, 7, 1],
-    //     [0, 2, 4, 7, 0, 6],
-    //     [0, 0, 2, 1, 6, 0]
-    // ]
-
     let vertices = await getVertices(await queries.getCount())
     const SIZE = vertices.length // get count of vertices
     let start = findIndex(from, vertices); // finding index of start point
     let end = findIndex(to, vertices); // finding index of end point
-    vertices = null // delete 'cause do not need
 
     let ver = [];   // array of previous vertices
     
@@ -199,6 +208,7 @@ async function shortestPath(matrix, from, to){
             if (!v[i] && (distance[i]<min)) { // if vertex is not visited yet and it has min distance
                 min = distance[i];  // now it vertex has min distance
                 minindex = i;       // index of vertex with min distance
+
             }
         }
 
@@ -245,21 +255,16 @@ async function shortestPath(matrix, from, to){
             }
         }
     }
-
     // make a path: finding previous vertex and adding them to path
     let path = []
-    console.log(distance[end])
-    let totalDistance = 0;
     do {
-        let item = ver.find(x => x.index == end)
-        
+        let item = ver.find(x => x.index == end)        
         path.push(item.index)
-        totalDistance += item.distance
         end = item.previos
     } while (end != start)
     path.push(start)
-    console.log(totalDistance)
-    return path.reverse()
+    
+    return makeRoadPath(path.reverse(),vertices,SIZE)
 }
 
 module.exports = {adjacencyMatrix, shortestPath, readMatrix}
