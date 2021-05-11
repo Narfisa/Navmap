@@ -24,10 +24,10 @@ function saveMatrix(matrix, file){
 
 // if points are equals
 function equals(firstVertex, secondVertex){
-    if (firstVertex.x == secondVertex.x && firstVertex.y == secondVertex.y){
+    if (firstVertex.x == secondVertex.x && firstVertex.y == secondVertex.y) {
         return true
     }
-    return false
+    return false;
 }
 
 // if points are connected(equals) with road in start or end point 
@@ -78,31 +78,6 @@ function init(vertices){
     return matrix
 }
 
-// get vertices of roads
-async function getVertices(count){
-    let vertices = [];
-    for (let i = 1; i <= count; i++){
-        let currentRow = await queries.getRoad(i)
-        
-        let startCoord = {
-            x: currentRow.x1,
-            y: currentRow.y1
-        }
-        let endCoord = {
-            x: currentRow.x2,
-            y: currentRow.y2
-        }
-        vertices.push(startCoord)
-        vertices.push(endCoord)
-    }
-
-    vertices = vertices.filter((item, index, self) => 
-        index == self.findIndex((t) => 
-            equals(t,item)))
-
-    return vertices
-}
-
 // making adjacency matrix
 // searching for every vertices for finding roads 
 // where the vertex is a start or end point of the road
@@ -110,14 +85,14 @@ async function getVertices(count){
 // and finding index of it and saving to matrix
 async function adjacencyMatrix(){
     let count = await queries.getCount()
-    let vertices = await getVertices(count)
-    console.log(count, vertices.length)
+    let vertices = await queries.getVertices()
     let matrix = init(vertices)
-
+    console.log(count,vertices.length)
+    
     for (let index = 0; index < vertices.length; index++){ // vertices
         console.log(index); 
         let vertex = vertices[index]
-        for (let j = 1; j <= count; j++){ // roads
+        for (let j = 0; j < count; j++){ // roads
             let road = await queries.getRoad(j);
             let connected = isConnected(vertex, road);
             if (connected == 'start'){
@@ -147,32 +122,25 @@ async function adjacencyMatrix(){
     return matrix
 }
 
-async function findRoadByVertices(firstVertex, secondVertex, count){
-    for (let i = 1; i<=count; i++){
-        let road = await queries.getRoad(i)
-        if (isConnected(firstVertex, road) && isConnected(secondVertex, road)){
-            return road
-        }
-    }
-    return false
-}
-async function makeRoadPath(path, vertices, count){
+// now road is the vertices array. To get path like roads,
+// finding roads where find vertices is startPoint && endPoint of the road(it makes findRoadByVertices function)
+function makePath(path, vertices){
     let roadPath = []
-    for (let i = 0; i < path.length-1; i++){
-        let firstVertex = vertices[path[i]]  
-        let secondVertex = vertices[path[i+1]]
-        let road = await findRoadByVertices(firstVertex, secondVertex, count)
-        if (road) roadPath.push(road.the_geom)
+    for (let i = 0; i < path.length; i++){
+        let vertex = vertices[path[i]]
+        roadPath.push([vertex.y, vertex.x])
     }
+    console.log('makeRoadPath is ended')
     return roadPath
 }
+
 // finding shortestPath with Dejkstra algoritm
 async function shortestPath(matrix, from, to){
-    let vertices = await getVertices(await queries.getCount())
+    let vertices = await queries.getVertices(await queries.getCount())
     const SIZE = vertices.length // get count of vertices
     let start = findIndex(from, vertices); // finding index of start point
     let end = findIndex(to, vertices); // finding index of end point
-
+    
     let ver = [];   // array of previous vertices
     
     let distance = [SIZE]; // distance array
@@ -264,7 +232,8 @@ async function shortestPath(matrix, from, to){
     } while (end != start)
     path.push(start)
     
-    return makeRoadPath(path.reverse(),vertices,SIZE)
+    console.log('shortest path found')
+    return makePath(path.reverse(),vertices)
 }
 
 module.exports = {adjacencyMatrix, shortestPath, readMatrix}

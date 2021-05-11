@@ -1,26 +1,38 @@
 const app = require("./config.js")
 const algoritm = require("./algoritm")
-var fs = require("fs");
+const fs = require("fs");
+const queries = require("./queries")
 
 const file = './matrix.json'
-let start = {
-    x: 83.0990183,
-    y: 54.856887
-} 
-let end = {
-    x: 83.0987331,
-    y: 54.858106
-}
 
-// for finding path we need to load adjacency matrix first
-algoritm.readMatrix(file, function (err, content) {
-    let path = algoritm.shortestPath(content, start, end)
-    .then(data => {
-        console.log(data)
+app.post('/getpath', async function (req, res) {
+    let start = req.body.start
+    let end = req.body.end
+    console.log(start, end)
+    let firstRoad = await queries.getNearestRoad(start)
+    let secondRoad = await queries.getNearestRoad(end)
+    let firstVertex = {
+        x: firstRoad.x1,
+        y: firstRoad.y1
+    }
+    let secondVertex = {
+        x: secondRoad.x2,
+        y: secondRoad.y2
+    }
+    console.log(firstVertex, secondVertex)
+    // for finding path we need to load adjacency matrix first
+    algoritm.readMatrix(file, function (content) {
+        algoritm.shortestPath(content, firstVertex, secondVertex)
+        .then(data => {
+            res.send(data)
+            return
+        })
+        .catch(err => {
+            console.log(err)
+            return res.sendStatus(404)
+        })
     })
-    .catch(err => {
-        console.log(err)
-    })
-})
+  });
+
 
 
