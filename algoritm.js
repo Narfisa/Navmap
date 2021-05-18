@@ -1,6 +1,14 @@
 const fs = require('fs')
 const queries = require('./queries')
 
+const file = './matrix.json'
+
+let matrix = [];
+
+readMatrix(file, function (err, content) {
+    matrix = content
+})
+
 // reading matrix from a json file
 function readMatrix(file, callback) {
     fs.readFile(file, function (err, content) {
@@ -116,7 +124,6 @@ async function adjacencyMatrix(){
             }
         }
     }
-    console.log('matrix filling ends')
 
     saveMatrix(matrix, './matrix.json')
     return matrix
@@ -130,12 +137,11 @@ function makePath(path, vertices){
         let vertex = vertices[path[i]]
         roadPath.push([vertex.y, vertex.x])
     }
-    console.log('makeRoadPath is ended')
     return roadPath
 }
 
 // finding shortestPath with Dejkstra algoritm
-async function shortestPath(matrix, from, to){
+async function shortestPath(from, to){
     let vertices = await queries.getVertices(await queries.getCount())
     const SIZE = vertices.length // get count of vertices
     let start = findIndex(from, vertices); // finding index of start point
@@ -183,7 +189,8 @@ async function shortestPath(matrix, from, to){
         // if minindex is found
         if (minindex != Infinity) {
             for (let i = 0; i<SIZE; i++) {
-                if (matrix[minindex][i] > 0) { // if vertices are connected(has weight between themselves)
+                if (matrix[minindex][i] > 0) { // if vertices are connected(has weight between themselves) 
+                    matrix[minindex][i] = matrix[minindex][i] / 60 + Math.floor(Math.random() * 100); // store a time instead distance(speed is 60 for now) 
                     temp = min + matrix[minindex][i]; // adding new weight
                     if (temp < distance[i]) {   // if calculated distance(temp) from start point to the vertex
                                                 // < then distance to the vertex is already known(distance[i]), 
@@ -207,7 +214,6 @@ async function shortestPath(matrix, from, to){
             v[minindex] = true;
         }
     } while (minindex < Infinity);
-    console.log('calc min distances end')
 
     // finding path like array of vertices
 
