@@ -22,6 +22,21 @@ async function getRoad(index){
     });
 }
 
+//find road with given index with geogson format
+async function getGeoJSON(id){
+    return db.one(`SELECT st_AsGeoJSON(the_geom) as road FROM roads where gid=${id}`)
+    .then(data => {
+        let coord = data.road.split('[').pop()
+        coord = coord.replace('}', ''); 
+        coord = coord.replace(']]', ''); 
+        coord = coord.split(',').reverse()
+        return coord
+    })
+    .catch(error => {
+        console.log("ERROR: ", error)
+    });
+}
+
 async function getVertices(){
     return db.many(`SELECT * from vertices`)
     .then(data => {
@@ -33,7 +48,7 @@ async function getVertices(){
 }
 
 async function getNearestRoad(point){
-    return db.one(`SELECT x1, y1, x2, y2, ST_DISTANCE(the_geom, ST_SetSrid(ST_POINT(${point.lng}, ${point.lat}),4326)) AS Distance
+    return db.one(`SELECT gid, x1, y1, x2, y2, the_geom, ST_DISTANCE(the_geom, ST_SetSrid(ST_POINT(${point.lng}, ${point.lat}),4326)) AS Distance
         FROM roads
         INNER JOIN (SELECT ST_SetSRID(ST_POINT(${point.lng}, ${point.lat}), 4326) AS point ) AS p
         ON ST_DWithin(point, the_geom, 20)  
@@ -47,24 +62,4 @@ async function getNearestRoad(point){
     })
 }
 
-// to do- add new vertices to adjacency matrix
-async function getNearestPoint(point){
-    let road = await getNearestRoad(point)
-    let query = `select st_startpoint(
-        st_intersection()
-    )`
-    return db.one(`SELECT x1, y1, x2, y2, ST_DISTANCE(the_geom, ST_SetSrid(ST_POINT(${point.lng}, ${point.lat}),4326)) AS Distance
-        FROM roads
-        INNER JOIN (SELECT ST_SetSRID(ST_POINT(${point.lng}, ${point.lat}), 4326) AS point ) AS p
-        ON ST_DWithin(point, the_geom, 20)  
-        ORDER BY Distance
-        LIMIT 1;`)
-    .then(data => {
-        return data
-    })
-    .catch(error => {
-        console.log("ERROR: ", error)
-    })
-}
-
-module.exports = {getCount, getRoad, getNearestRoad, getVertices}
+module.exports = {getCount, getRoad, getNearestRoad, getVertices, getGeoJSON}

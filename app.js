@@ -18,7 +18,6 @@ app.post('/getpath', async function (req, res) {
     }
     algoritm.shortestPath(firstVertex, secondVertex)
     .then(data => {
-        console.log(firstVertex, secondVertex)
         res.send(data)
         return
     })
@@ -26,7 +25,7 @@ app.post('/getpath', async function (req, res) {
         console.log(err)
         return res.sendStatus(404)
     })
-  });
+});
 
 
 

@@ -64,6 +64,7 @@ function findIndex(vertex, vertices){
             return i
         }
     }
+    return false
 }
 
 // init an adjacency matrix
@@ -109,8 +110,8 @@ async function adjacencyMatrix(){
                     y: road.y2
                 }
                 let id = findIndex(endVertex, vertices)
-                matrix[index][id] = road.length
-                matrix[id][index] = road.length
+                matrix[index][id] = {id: road.gid, length: road.length}
+                matrix[id][index] = {id: road.gid, length: road.length}
                 console.log('   ',id)
             } else if (connected == 'end'){
                 let startVertex = {
@@ -118,8 +119,8 @@ async function adjacencyMatrix(){
                     y: road.y1
                 }
                 let id = findIndex(startVertex, vertices)
-                matrix[index][id] = road.length
-                matrix[id][index] = road.length
+                matrix[index][id] = {id: road.gid, length: road.length}
+                matrix[id][index] = {id: road.gid, length: road.length}
                 console.log('   ',id)
             }
         }
@@ -131,30 +132,26 @@ async function adjacencyMatrix(){
 
 // now road is the vertices array. To get path like roads,
 // finding roads where find vertices is startPoint && endPoint of the road(it makes findRoadByVertices function)
-function makePath(path, vertices){
+async function makePath(path){
     let roadPath = []
     for (let i = 0; i < path.length; i++){
-        let vertex = vertices[path[i]]
-        roadPath.push([vertex.y, vertex.x])
+        roadPath.push(await queries.getGeoJSON(path[i]))
     }
     return roadPath
 }
 
 // finding shortestPath with Dejkstra algoritm
 async function shortestPath(from, to){
-    let vertices = await queries.getVertices(await queries.getCount())
+    // INIT
+    let vertices = await queries.getVertices()
     const SIZE = vertices.length // get count of vertices
     let start = findIndex(from, vertices); // finding index of start point
-    let end = findIndex(to, vertices); // finding index of end point
-    
-    let ver = [];   // array of previous vertices
-    
+    let end = findIndex(to, vertices); // finding index of end point    
+    let ver = [];   // array of previous vertices    
     let distance = [SIZE]; // distance array
     let v = [SIZE]; // flag - a vertex is visited or not
     let temp, minindex, min; // temp is for calculating min distance to every vertex
                              // min - current min distance, minindex- current index of vertex with min distance
-    
-    // init 
     // distance for all bertices is infinity
     // all vertices are not visited yet
     for (let i = 0; i<SIZE; i++)
@@ -162,14 +159,9 @@ async function shortestPath(from, to){
         distance[i] = Infinity;
         v[i] = false;
     }
-
     // for start point distance is 0 in the algorithm
     distance[start] = 0; 
-    ver.push({              
-        index: start,
-        previos: null,
-        distance: distance[start]    
-    })
+
     // cycle
     do {
         // reset values every step to 
@@ -189,23 +181,22 @@ async function shortestPath(from, to){
         // if minindex is found
         if (minindex != Infinity) {
             for (let i = 0; i<SIZE; i++) {
-                if (matrix[minindex][i] > 0) { // if vertices are connected(has weight between themselves) 
-                    matrix[minindex][i] = matrix[minindex][i] / 60 + Math.floor(Math.random() * 100); // store a time instead distance(speed is 60 for now) 
-                    temp = min + matrix[minindex][i]; // adding new weight
+                if (matrix[minindex][i].length > 0) { // if vertices are connected(has weight between themselves) 
+                    matrix[minindex][i].length +=  Math.floor(Math.random() * 10) -5; // store a time instead distance(speed is 50 for now) 
+                    temp = min + matrix[minindex][i].length; // adding new weight
                     if (temp < distance[i]) {   // if calculated distance(temp) from start point to the vertex
                                                 // < then distance to the vertex is already known(distance[i]), 
                         distance[i] = temp;     // then new distance is calculated distance now
                         
                         // adding a vertex to array
                         // there are looking for a connected vertex with the min distance. If its found - added it.
-                        // checking vertex(that is visiting now) is a vertex with 'minindex' index and its will be the previos vertex.
-                        // a vertex connected to the cheching vertex with min distance - vertex with 'i' index
                         // there is also pushing distance between this vertices, 
                         // 'cause after checking other vertices the distance maybe less than previous value
                         ver.push({              
                             index: i,  
                             previos: minindex,  
-                            distance: matrix[i][minindex]
+                            id: matrix[i][minindex].id,
+                            distance: matrix[i][minindex].length / 800
                         })
                     }
                 }
@@ -216,7 +207,6 @@ async function shortestPath(from, to){
     } while (minindex < Infinity);
 
     // finding path like array of vertices
-
     // deleting dublicates with the most length(distance)
     for (let i=0; i<ver.length; i++){
         for (let j=0; j<ver.length; j++){
@@ -231,15 +221,16 @@ async function shortestPath(from, to){
     }
     // make a path: finding previous vertex and adding them to path
     let path = []
+    let length = 0
     do {
-        let item = ver.find(x => x.index == end)        
-        path.push(item.index)
+        let item = ver.find(x => x.index == end)
+        length += item.distance   
+        path.push(item.id)
         end = item.previos
     } while (end != start)
-    path.push(start)
-    
+
     console.log('shortest path found')
-    return makePath(path.reverse(),vertices)
+    return {length: length, path: await makePath(path)}
 }
 
-module.exports = {adjacencyMatrix, shortestPath, readMatrix}
+module.exports = {adjacencyMatrix, shortestPath}
